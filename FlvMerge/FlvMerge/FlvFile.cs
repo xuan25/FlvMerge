@@ -279,15 +279,34 @@ namespace FlvMerge
             public abstract uint BodyLength { get; }
             public abstract byte[] BodyBytes { get; }
 
-            public uint TagLengthWithPts
+            public uint TagLength
             {
                 get
                 {
-                    return Header.HeaderLength + BodyLength + (uint)Util.UintType.Uint32;
+                    return Header.HeaderLength + BodyLength;
                 }
             }
 
             public byte[] TagBytes
+            {
+                get
+                {
+                    byte[] bytes = new byte[TagLength];
+                    Header.HeaderBytes.CopyTo(bytes, 0);
+                    BodyBytes.CopyTo(bytes, Header.HeaderLength);
+                    return bytes;
+                }
+            }
+
+            public uint TagLengthWithPts
+            {
+                get
+                {
+                    return TagLength + (uint)Util.UintType.Uint32;
+                }
+            }
+
+            public byte[] TagBytesWithPts
             {
                 get
                 {
@@ -323,9 +342,6 @@ namespace FlvMerge
                         byte[] bodyBytes = new byte[bodysize];
                         if (stream.Read(bodyBytes, 0, bodyBytes.Length) == bodyBytes.Length)
                         {
-                            //byte[] tagBytes = new byte[headerBytes.Length + bodyBytes.Length + 4];
-                            //headerBytes.CopyTo(tagBytes, 0);
-                            //bodyBytes.CopyTo(tagBytes, headerBytes.Length);
                             byte[] ptsBytes = new byte[4];
                             if (stream.Read(ptsBytes, 0, 4) == 4)
                             {
@@ -401,11 +417,11 @@ namespace FlvMerge
                     }
                 }
 
-                public int Filtered
+                public uint Filtered
                 {
                     get
                     {
-                        return (HeaderBytes[0] & 0b00100000) >> 5;
+                        return ((uint)HeaderBytes[0] & 0b00100000) >> 5;
                     }
                     set
                     {
@@ -413,11 +429,11 @@ namespace FlvMerge
                     }
                 }
 
-                public Tag.TagType Type
+                public TagType Type
                 {
                     get
                     {
-                        return (Tag.TagType)(HeaderBytes[0] & 0b00011111);
+                        return (TagType)(HeaderBytes[0] & 0b00011111);
                     }
                     set
                     {
@@ -433,11 +449,11 @@ namespace FlvMerge
                     }
                 }
 
-                public int Timestamp
+                public uint Timestamp
                 {
                     get
                     {
-                        return ((HeaderBytes[7] << 24) | (HeaderBytes[4] << 16) | (HeaderBytes[5] << 8) | (HeaderBytes[6]));
+                        return ((uint)HeaderBytes[7] << 24) | ((uint)HeaderBytes[4] << 16) | ((uint)HeaderBytes[5] << 8) | (HeaderBytes[6]);
                     }
                     set
                     {
@@ -634,7 +650,10 @@ namespace FlvMerge
 
                     public override string ToString()
                     {
-                        return Value.ToString();
+                        if (Value)
+                            return "true";
+                        else
+                            return "false";
                     }
                 }
 
@@ -687,7 +706,7 @@ namespace FlvMerge
 
                     public override string ToString()
                     {
-                        return Value.ToString();
+                        return string.Format("\"{0}\"", Value.ToString());
                     }
                 }
 
@@ -760,6 +779,22 @@ namespace FlvMerge
                     public IEnumerator GetEnumerator()
                     {
                         return ((IEnumerable)Items).GetEnumerator();
+                    }
+
+                    public override string ToString()
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("{");
+                        int i = 0;
+                        foreach (KeyValuePair<string, ScriptData> keyValuePair in Items)
+                        {
+                            if(i != 0)
+                                stringBuilder.Append(",");
+                            stringBuilder.Append(string.Format("\"{0}\":{1}", keyValuePair.Key, keyValuePair.Value));
+                            i++;
+                        }
+                        stringBuilder.Append("}");
+                        return stringBuilder.ToString();
                     }
                 }
 
@@ -882,6 +917,22 @@ namespace FlvMerge
                     {
                         return ((IEnumerable)Items).GetEnumerator();
                     }
+
+                    public override string ToString()
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("{");
+                        int i = 0;
+                        foreach (KeyValuePair<string, ScriptData> keyValuePair in Items)
+                        {
+                            if (i != 0)
+                                stringBuilder.Append(",");
+                            stringBuilder.Append(string.Format("\"{0}\":{1}", keyValuePair.Key, keyValuePair.Value));
+                            i++;
+                        }
+                        stringBuilder.Append("}");
+                        return stringBuilder.ToString();
+                    }
                 }
 
                 public class ObjectEndMark : ScriptData
@@ -973,6 +1024,22 @@ namespace FlvMerge
                     {
                         return ((IEnumerable)Items).GetEnumerator();
                     }
+
+                    public override string ToString()
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("[");
+                        int i = 0;
+                        foreach (ScriptData scriptData in Items)
+                        {
+                            if (i != 0)
+                                stringBuilder.Append(",");
+                            stringBuilder.Append(string.Format("{0}", scriptData));
+                            i++;
+                        }
+                        stringBuilder.Append("]");
+                        return stringBuilder.ToString();
+                    }
                 }
 
                 #endregion
@@ -1031,13 +1098,55 @@ namespace FlvMerge
                 }
 
                 #endregion
+
+                public override string ToString()
+                {
+                    return string.Format("{{\"Name\":{0},\"Value\":{1}}}", Name, Value);
+                }
             }
 
             public class VideoTag : Tag
             {
+                #region Enums
+
+                public enum FrameTypes
+                {
+                    KeyFrame = 1,
+                    InterFrame,
+                    DisposableInterFrame,
+                    GeneratedKeyfFrame,
+                    VideoInfoCommandFrame
+                }
+
+                public enum CodecIDs
+                {
+                    SorensonH263 = 2,
+                    ScreenVideo,
+                    On2Pv6,
+                    On2Pv6WithAlphaChannel,
+                    ScreenVideoVersion2,
+                    AVC
+                }
+
+                #endregion
+
                 #region Properties
 
-                // TODO: Video tag headers
+                public FrameTypes FrameType
+                {
+                    get
+                    {
+                        return (FrameTypes)((uint)BodyBytes[0] >> 4);
+                    }
+                }
+
+                public CodecIDs CodecID
+                {
+                    get
+                    {
+                        return (CodecIDs)((uint)BodyBytes[0] & 0b00001111);
+                    }
+                }
 
                 public override TagType Type
                 {
@@ -1071,9 +1180,81 @@ namespace FlvMerge
 
             public class AudioTag : Tag
             {
+                #region Enums
+
+                public enum SoundFormats
+                {
+                    LinearPcmPlatformEndian = 0,
+                    AdPcm,
+                    Mp3,
+                    LinearPcmLittleEndian,
+                    Nellymoser16kHzMono,
+                    Nellymoser8kHzMono,
+                    Nellymoser,
+                    G711ALawLogarithmicPcm,
+                    G711MuLawLogarithmicPcm,
+                    Reserved,
+                    AAC,
+                    Speex,
+                    Mp3At8kHz = 14,
+                    DeviceSpecificSound
+                }
+
+                public enum SoundRates
+                {
+                    R5p5kHz = 0,
+                    R11kHz,
+                    R22kHz,
+                    R44kHz,
+                }
+
+                public enum SoundSizes
+                {
+                    S8bit = 0,
+                    S16bit,
+                }
+
+                public enum SoundTypes
+                {
+                    Mono = 0,
+                    Stereo,
+                }
+
+                #endregion
+
                 #region Properties
 
-                // TODO: Audio tag headers
+                public SoundFormats SoundFormat
+                {
+                    get
+                    {
+                        return (SoundFormats)((uint)BodyBytes[0] >> 4);
+                    }
+                }
+
+                public SoundRates SoundRate
+                {
+                    get
+                    {
+                        return (SoundRates)(((uint)BodyBytes[0] & 0b00001100) >> 2);
+                    }
+                }
+
+                public SoundSizes SoundSize
+                {
+                    get
+                    {
+                        return (SoundSizes)(((uint)BodyBytes[0] & 0b00000010) >> 1);
+                    }
+                }
+
+                public SoundTypes SoundType
+                {
+                    get
+                    {
+                        return (SoundTypes)((uint)BodyBytes[0] & 0b00000001);
+                    }
+                }
 
                 public override TagType Type
                 {
