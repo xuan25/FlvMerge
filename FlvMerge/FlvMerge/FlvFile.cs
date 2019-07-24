@@ -117,7 +117,10 @@ namespace FlvMerge
 
             public static double ToDoubleBe(byte[] bytes)
             {
-                return BitConverter.ToDouble(BufferReverse(bytes), 0);
+                byte[] buffer = new byte[8];
+                for (int i = 0; i < 8; i++)
+                    buffer[i] = bytes[7 - i];
+                return BitConverter.ToDouble(buffer, 0);
             }
 
             public static byte[] ToBytesLe(uint value, UintType uintType)
@@ -132,18 +135,13 @@ namespace FlvMerge
 
             public static byte[] ToBytesLe(double value)
             {
-                return BufferReverse(BitConverter.GetBytes(value));
-            }
-
-            private static byte[] BufferReverse(byte[] bytes)
-            {
-                int length = bytes.Length;
+                byte[] bytes = BitConverter.GetBytes(value);
                 byte temp;
-                for (int i = 0; i < length / 2; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     temp = bytes[i];
-                    bytes[i] = bytes[length - i - 1];
-                    bytes[length - i - 1] = temp;
+                    bytes[i] = bytes[7 - i];
+                    bytes[7 - i] = temp;
                 }
                 return bytes;
             }
@@ -155,7 +153,6 @@ namespace FlvMerge
 
         public class FlvHeader
         {
-
             #region StreamFlag Enum
 
             public enum StreamFlag
@@ -168,6 +165,8 @@ namespace FlvMerge
             #endregion
 
             #region Properties
+
+            public const uint HeaderLengthWithPts = 13;
 
             public byte[] HeaderBytes { get; private set; }
 
@@ -202,6 +201,10 @@ namespace FlvMerge
                 get
                 {
                     return (StreamFlag)(HeaderBytes[4] & 0b00000101);
+                }
+                set
+                {
+                    HeaderBytes[4] = (byte)((HeaderBytes[4] & (0b00000101 ^ 0b11111111)) | (byte)value);
                 }
             }
 
@@ -238,13 +241,19 @@ namespace FlvMerge
                 HeaderBytes = headerBytes;
             }
 
+            public FlvHeader(StreamFlag streamFlag)
+            {
+                HeaderBytes = new byte[] { (byte)'F', (byte)'L', (byte)'V', 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00 };
+                StreamType = streamFlag;
+            }
+
             #endregion
 
             #region Static method
 
             public static FlvHeader ReadHeader(Stream stream)
             {
-                byte[] headerBytes = new byte[13];
+                byte[] headerBytes = new byte[HeaderLengthWithPts];
                 if (stream.Read(headerBytes, 0, headerBytes.Length) == headerBytes.Length)
                 {
                     FlvHeader flvHeader = new FlvHeader(headerBytes);
@@ -364,7 +373,8 @@ namespace FlvMerge
                 }
                 else
                 {
-                    throw new EofException();
+                    //throw new EofException();
+                    return null;
                 }
             }
 
@@ -447,6 +457,11 @@ namespace FlvMerge
                     {
                         return Util.ToUintBe(HeaderBytes, 1, Util.UintType.Uint24);
                     }
+                    set
+                    {
+                        byte[] bytes = Util.ToBytesLe(value, Util.UintType.Uint24);
+                        bytes.CopyTo(HeaderBytes, 1);
+                    }
                 }
 
                 public uint Timestamp
@@ -484,6 +499,12 @@ namespace FlvMerge
                 public TagHeader(byte[] headerBytes)
                 {
                     HeaderBytes = headerBytes;
+                }
+
+                public TagHeader(TagType tagType)
+                {
+                    HeaderBytes = new byte[11];
+                    Type = tagType;
                 }
 
                 #endregion
@@ -1095,6 +1116,12 @@ namespace FlvMerge
                     {
                         throw new UnsupportedFormat();
                     }
+                }
+
+                public ScriptTag(string name, EcmaArray value) : base (new TagHeader(TagType.Script).HeaderBytes)
+                {
+                    Name = new String(name);
+                    Value = value;
                 }
 
                 #endregion
