@@ -76,17 +76,14 @@ namespace FlvMerge
 
         #region Exceptions
 
-        public class EofException : Exception
-        {
-            public EofException() : base()
-            {
-
-            }
-        }
-
         public class UnsupportedFormat : Exception
         {
             public UnsupportedFormat() : base()
+            {
+
+            }
+
+            public UnsupportedFormat(string message) : base(message)
             {
 
             }
@@ -234,7 +231,7 @@ namespace FlvMerge
 
             #endregion
 
-            #region Constructor
+            #region Constructors
 
             public FlvHeader(byte[] headerBytes)
             {
@@ -358,22 +355,21 @@ namespace FlvMerge
                             }
                             else
                             {
-                                throw new UnsupportedFormat();
+                                throw new UnsupportedFormat("Cannot read previous tag size");
                             }
                         }
                         else
                         {
-                            throw new UnsupportedFormat();
+                            throw new UnsupportedFormat("Cannot read tag body");
                         }
                     }
                     else
                     {
-                        throw new UnsupportedFormat();
+                        throw new UnsupportedFormat("Cannot read tag header");
                     }
                 }
                 else
                 {
-                    //throw new EofException();
                     return null;
                 }
             }
@@ -394,7 +390,7 @@ namespace FlvMerge
                         tagBase = new ScriptTag(headerBytes, bodyBytes);
                         break;
                     default:
-                        throw new UnsupportedFormat();
+                        throw new UnsupportedFormat(string.Format("Unsupported Tag type 0x{0}", tagType.ToString("X2")));
                 }
                 return tagBase;
             }
@@ -494,7 +490,7 @@ namespace FlvMerge
 
                 #endregion
 
-                #region Constructor
+                #region Constructors
 
                 public TagHeader(byte[] headerBytes)
                 {
@@ -577,7 +573,7 @@ namespace FlvMerge
                                 scriptData = new StrictArray(stream);
                                 break;
                             default:
-                                throw new UnsupportedFormat();
+                                throw new UnsupportedFormat(string.Format("Unsupported Script data type 0x{0}", scriptDataType.ToString("X2")));
                         }
                         return scriptData;
                     }
@@ -1083,7 +1079,7 @@ namespace FlvMerge
                 {
                     get
                     {
-                        return 1 + (uint)Name.ScriptDataLength + 1 + (uint)Value.ScriptDataLength;
+                        return 1 + Name.ScriptDataLength + 1 + Value.ScriptDataLength;
                     }
                 }
 
@@ -1102,7 +1098,7 @@ namespace FlvMerge
 
                 #endregion
 
-                #region Constructor
+                #region Constructors
 
                 public ScriptTag(byte[] headerBytes, byte[] bodyBytes) : base(headerBytes)
                 {
@@ -1114,7 +1110,7 @@ namespace FlvMerge
                     }
                     else
                     {
-                        throw new UnsupportedFormat();
+                        throw new UnsupportedFormat("Script tag with filter is not supported");
                     }
                 }
 
@@ -1128,7 +1124,15 @@ namespace FlvMerge
 
                 public override string ToString()
                 {
-                    return string.Format("{{\"Name\":{0},\"Value\":{1}}}", Name, Value);
+                    return string.Format(
+                        "{{\"Type\":\"{0}\"," +
+                        "\"Timestamp\":{1}," +
+                        "\"Name\":{2}," +
+                        "\"Value\":{3}}}", 
+                        Type, 
+                        Header.Timestamp, 
+                        Name, 
+                        Value);
                 }
             }
 
@@ -1203,6 +1207,19 @@ namespace FlvMerge
                 }
 
                 #endregion
+
+                public override string ToString()
+                {
+                    return string.Format(
+                        "{{\"Type\":\"{0}\"," +
+                        "\"Timestamp\":{1}," +
+                        "\"FrameType\":\"{2}\"," +
+                        "\"CodecID\":\"{3}\"}}", 
+                        Type, 
+                        Header.Timestamp, 
+                        FrameType, 
+                        CodecID);
+                }
             }
 
             public class AudioTag : Tag
@@ -1311,6 +1328,23 @@ namespace FlvMerge
                 }
 
                 #endregion
+
+                public override string ToString()
+                {
+                    return string.Format(
+                        "{{\"Type\":\"{0}\"," +
+                        "\"Timestamp\":{1}," +
+                        "\"SoundFormat\":\"{2}\"," +
+                        "\"SoundRate\":\"{3}\"," +
+                        "\"SoundSize\":\"{4}\"," +
+                        "\"SoundType\":\"{5}\"}}", 
+                        Type, 
+                        Header.Timestamp, 
+                        SoundFormat, 
+                        SoundRate, 
+                        SoundSize, 
+                        SoundType);
+                }
             }
         }
 
