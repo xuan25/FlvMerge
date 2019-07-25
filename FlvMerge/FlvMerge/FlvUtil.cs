@@ -10,9 +10,12 @@ namespace FlvMerge
     /// </summary>
     public static class FlvUtil
     {
+        private const string creator = "creator";
+        private const string matadatacreator = "matadatacreator";
+
         public static void FlvMerge(string[] inputs, string output)
         {
-            MetadataTagCreater.Metadata metadata = new MetadataTagCreater.Metadata("creator", "matadatacreator");
+            MetadataTagCreater.Metadata metadata = new MetadataTagCreater.Metadata(creator, matadatacreator);
             uint timestampOffset = 0;
 
             foreach(string input in inputs)
