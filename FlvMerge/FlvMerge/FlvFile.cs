@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-// Reference: https://www.adobe.com/content/dam/acom/en/devnet/flv/video_file_format_spec_v10_1.pdf
-
 namespace FlvMerge
 {
     /// <summary>
+    /// Class <c>FlvFile</c> models flv files and provids read, write and edit methods.
     /// Author: Xuan525
+    /// Date: 25/07/2019
+    /// Reference: https://www.adobe.com/content/dam/acom/en/devnet/flv/video_file_format_spec_v10_1.pdf
     /// </summary>
     public class FlvFile : IDisposable
     {

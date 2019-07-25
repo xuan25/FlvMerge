@@ -3,11 +3,16 @@ using System.IO;
 
 namespace FlvMerge
 {
+    /// <summary>
+    /// Class <c>FlvUtil</c> is a utility set for Flv file.
+    /// Author: Xuan525
+    /// Date: 25/07/2019
+    /// </summary>
     public static class FlvUtil
     {
         public static void FlvMerge(string[] inputs, string output)
         {
-            MetadataTagCreater.Metadata metadata = new MetadataTagCreater.Metadata("description", "matadatacreator");
+            MetadataTagCreater.Metadata metadata = new MetadataTagCreater.Metadata("creator", "matadatacreator");
             uint timestampOffset = 0;
 
             foreach(string input in inputs)
@@ -127,7 +132,7 @@ namespace FlvMerge
         {
             public struct Metadata
             {
-                public string description;
+                public string creator;
                 public string metadatacreator;
                 public bool hasKeyframes;
                 public bool hasVideo;
@@ -155,9 +160,9 @@ namespace FlvMerge
                 public List<uint> keyframesFilepositions;
                 public List<double> keyframesTimes;
 
-                public Metadata(string description, string metadatacreator)
+                public Metadata(string creator, string metadatacreator)
                 {
-                    this.description = description;
+                    this.creator = creator;
                     this.metadatacreator = metadatacreator;
                     hasKeyframes = false;
                     hasVideo = false;
@@ -191,7 +196,7 @@ namespace FlvMerge
             {
                 FlvFile.Tag.ScriptTag.EcmaArray ecmaArray = new FlvFile.Tag.ScriptTag.EcmaArray();
 
-                ecmaArray.Items.Add("description", new FlvFile.Tag.ScriptTag.String(metadata.description));
+                ecmaArray.Items.Add("creator", new FlvFile.Tag.ScriptTag.String(metadata.creator));
                 ecmaArray.Items.Add("metadatacreator", new FlvFile.Tag.ScriptTag.String(metadata.metadatacreator));
                 ecmaArray.Items.Add("hasKeyframes", new FlvFile.Tag.ScriptTag.Boolean(metadata.hasKeyframes));
                 ecmaArray.Items.Add("hasVideo", new FlvFile.Tag.ScriptTag.Boolean(metadata.hasVideo));
